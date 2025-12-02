@@ -1,0 +1,5 @@
+{
+  "name": "AutoScout AI",
+  "description": "An AI agent that analyzes company websites and suggests practical, low-code automation strategies.",
+  "requestFramePermissions": []
+}
