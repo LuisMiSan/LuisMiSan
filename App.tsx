@@ -66,8 +66,14 @@ const App: React.FC = () => {
     setJustSaved(false);
 
     try {
-      // Pass the current language to the service
-      const data = await analyzeCompanyUrl(url, language);
+      // Prepare context from analysis history (Knowledge Base)
+      // We create a summary string of past analyses to help the AI
+      const historyContext = analysisHistory.map(item => {
+        return `[Company: ${item.result.profile.name} | Industry: ${item.result.profile.industry} | Automations: ${item.result.automations.map(a => a.title).join(', ')}]`;
+      }).join('\n');
+
+      // Pass the current language and the history context to the service
+      const data = await analyzeCompanyUrl(url, language, historyContext);
       setResult(data);
       setAppState(AppState.SUCCESS);
     } catch (err: any) {
@@ -190,7 +196,7 @@ const App: React.FC = () => {
     btnSave: language === 'es' ? 'Guardar Análisis' : 'Save Analysis',
     btnDownload: language === 'es' ? 'Descargar Reporte (.md)' : 'Download Report (.md)',
     btnSaved: language === 'es' ? '¡Guardado!' : 'Saved!',
-    dbTitle: language === 'es' ? 'Historial de Análisis' : 'Analysis History',
+    dbTitle: language === 'es' ? 'Historial de Análisis (Base de Conocimiento)' : 'Analysis History (Knowledge Base)',
     dbEmpty: language === 'es' ? 'No hay análisis guardados en la base de datos.' : 'No analyses saved in the database.',
     load: language === 'es' ? 'Cargar' : 'Load',
   };

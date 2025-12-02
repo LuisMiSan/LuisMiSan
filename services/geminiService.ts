@@ -12,7 +12,7 @@ const cleanJsonString = (text: string): string => {
   return clean;
 };
 
-export const analyzeCompanyUrl = async (url: string, language: Language): Promise<AnalysisResult> => {
+export const analyzeCompanyUrl = async (url: string, language: Language, pastAnalysesContext: string = ''): Promise<AnalysisResult> => {
   if (!process.env.API_KEY) {
     throw new Error("API Key is missing. Please check your environment variables.");
   }
@@ -27,12 +27,24 @@ export const analyzeCompanyUrl = async (url: string, language: Language): Promis
     : "CRITICAL: All generated text content MUST be in ENGLISH.";
 
   const prompt = `
-    I need you to act as an expert Business Process Automation Consultant.
+    I need you to act as an expert Technical Automation Architect.
     
     ${langInstruction}
 
+    INPUT CONTEXT:
+    1. TARGET URL: "${url}"
+    
+    2. INTERNAL KNOWLEDGE BASE (PREVIOUS ANALYSES):
+    "${pastAnalysesContext}"
+    
+    INSTRUCTION FOR KNOWLEDGE BASE:
+    - Review the "INTERNAL KNOWLEDGE BASE" above. 
+    - If there are companies in the same or similar industry, use their successful automation ideas as inspiration, but refine them to be specific to the current target.
+    - If the industry is different, ensure the new suggestions are as high-quality and specific as the previous ones.
+    - Use this data to ensure consistency and learn from previous workflows.
+
     STEP 1: RESEARCH
-    Use Google Search to analyze the following company URL: "${url}".
+    Use Google Search to analyze the target company URL.
     Find out:
     - What is the company name?
     - What industry/sector are they in?
@@ -42,9 +54,16 @@ export const analyzeCompanyUrl = async (url: string, language: Language): Promis
     - Identify 2-3 potential operational bottlenecks or challenges common in this specific industry.
 
     STEP 2: IDEATION
-    Based strictly on the research above, generate 6 practical, low-code/no-code automation ideas suitable for this specific business. 
-    Focus on high-impact, low-cost solutions using tools like Zapier, Make, OpenAI API, Chatbots, Airtable, etc.
-    Avoid generic advice. Make it specific to their industry (e.g., if it's a dentist, suggest appointment reminders; if it's e-commerce, suggest abandoned cart agents).
+    Based strictly on the research above, generate 6 specific, scalable automation workflows suitable for this business.
+    
+    CRITICAL TECH STACK INSTRUCTIONS:
+    - **Prioritize n8n** as the main orchestration tool (workflow automation).
+    - **Focus on AI Agents** (LLMs acting as workers, not just chatbots).
+    - **Use APIs** directly where possible for scalability.
+    - Avoid suggesting simple "Zapier" or "Make" zaps unless it's for very basic triggers. Focus on robust, scalable architectures.
+    - Suggestions should be practical but aim for professional scalability.
+
+    Make it specific to their industry (e.g., if it's a law firm, suggest an 'AI Legal Research Agent' via n8n; if e-commerce, an 'Inventory prediction API agent').
 
     STEP 3: OUTPUT
     Return the result as a strictly valid JSON object. Do not add conversational text outside the JSON.
@@ -62,10 +81,10 @@ export const analyzeCompanyUrl = async (url: string, language: Language): Promis
       "automations": [
         {
           "title": "String",
-          "description": "String (Explain what it does and why it helps)",
+          "description": "String (Explain the workflow logic and why it scales)",
           "impact": "High" | "Medium" | "Low",
           "difficulty": "Easy" | "Moderate" | "Advanced",
-          "tools": ["Tool1", "Tool2"],
+          "tools": ["n8n", "OpenAI API", "Anthropic API", "Vector DB", "Specific API"],
           "implementationSteps": ["Step 1", "Step 2"]
         }
       ]
