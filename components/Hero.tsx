@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Search, Sparkles, Globe } from 'lucide-react';
 import { AppState, Language } from '../types';
 
@@ -7,11 +7,19 @@ interface HeroProps {
   appState: AppState;
   language: Language;
   setLanguage: (lang: Language) => void;
+  url: string;
+  setUrl: (url: string) => void;
 }
 
-export const Hero: React.FC<HeroProps> = ({ onAnalyze, appState, language, setLanguage }) => {
-  const [url, setUrl] = useState('');
-
+export const Hero: React.FC<HeroProps> = ({ 
+  onAnalyze, 
+  appState, 
+  language, 
+  setLanguage,
+  url,
+  setUrl
+}) => {
+  
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (url.trim()) {

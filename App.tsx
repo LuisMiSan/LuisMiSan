@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Hero } from './components/Hero';
 import { CompanyCard } from './components/CompanyCard';
@@ -12,7 +11,12 @@ const App: React.FC = () => {
   // Default to Spanish ('es')
   const [language, setLanguage] = useState<Language>('es');
   const [appState, setAppState] = useState<AppState>(AppState.IDLE);
+  
+  // State for the input field
+  const [inputUrl, setInputUrl] = useState<string>('');
+  // State for the currently analyzed URL (context)
   const [currentUrl, setCurrentUrl] = useState<string>('');
+  
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [savedAutomations, setSavedAutomations] = useState<AutomationIdea[]>([]);
@@ -100,6 +104,7 @@ const App: React.FC = () => {
     localStorage.setItem('autoScout_db', JSON.stringify(newHistory));
     
     setJustSaved(true);
+    setInputUrl(''); // Clear the input box
     setTimeout(() => setJustSaved(false), 3000);
   };
 
@@ -169,6 +174,8 @@ const App: React.FC = () => {
     downloadAnchorNode.click();
     downloadAnchorNode.remove();
     URL.revokeObjectURL(url);
+
+    setInputUrl(''); // Clear the input box
   };
 
   const handleDeleteHistoryItem = (id: string) => {
@@ -180,6 +187,7 @@ const App: React.FC = () => {
   const handleLoadHistoryItem = (item: SavedAnalysis) => {
     setResult(item.result);
     setCurrentUrl(item.url);
+    setInputUrl(item.url); // Reflect the loaded URL in the input box
     setAppState(AppState.SUCCESS);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -214,6 +222,8 @@ const App: React.FC = () => {
         appState={appState} 
         language={language}
         setLanguage={setLanguage}
+        url={inputUrl}
+        setUrl={setInputUrl}
       />
 
       <main className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-20 w-full">
