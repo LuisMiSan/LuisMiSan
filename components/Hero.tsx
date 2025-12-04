@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Sparkles, Globe } from 'lucide-react';
+import { Search, Sparkles, Globe, Settings } from 'lucide-react';
 import { AppState, Language } from '../types';
 
 interface HeroProps {
@@ -9,6 +9,7 @@ interface HeroProps {
   setLanguage: (lang: Language) => void;
   url: string;
   setUrl: (url: string) => void;
+  onOpenAdmin: () => void;
 }
 
 export const Hero: React.FC<HeroProps> = ({ 
@@ -17,7 +18,8 @@ export const Hero: React.FC<HeroProps> = ({
   language, 
   setLanguage,
   url,
-  setUrl
+  setUrl,
+  onOpenAdmin
 }) => {
   
   const handleSubmit = (e: React.FormEvent) => {
@@ -42,6 +44,7 @@ export const Hero: React.FC<HeroProps> = ({
     free: language === 'es' ? 'Análisis Gratuito' : 'Free Analysis',
     powered: language === 'es' ? 'Potenciado por Gemini' : 'Powered by Gemini',
     live: language === 'es' ? 'Búsqueda en Vivo' : 'Live Web Search',
+    settings: language === 'es' ? 'Ajustes' : 'Config',
   };
 
   return (
@@ -49,8 +52,17 @@ export const Hero: React.FC<HeroProps> = ({
       {/* Background decorations */}
       <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-blue-500/10 blur-[100px] rounded-full pointer-events-none" />
       
-      {/* Language Toggle */}
-      <div className="absolute top-4 right-4 z-50">
+      {/* Header Actions (Language & Admin) */}
+      <div className="absolute top-4 right-4 z-50 flex items-center gap-3">
+        <button
+          onClick={onOpenAdmin}
+          className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-800 border border-slate-700 text-slate-300 hover:text-white hover:border-purple-500 transition-all text-sm font-medium"
+          title={t.settings}
+        >
+          <Settings className="w-4 h-4" />
+          <span className="hidden sm:inline">{t.settings}</span>
+        </button>
+
         <button
           onClick={() => setLanguage(language === 'es' ? 'en' : 'es')}
           className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-800 border border-slate-700 text-slate-300 hover:text-white hover:border-blue-500 transition-all text-sm font-medium"

@@ -3,9 +3,20 @@ import { Hero } from './components/Hero';
 import { CompanyCard } from './components/CompanyCard';
 import { AutomationCard } from './components/AutomationCard';
 import { Footer } from './components/Footer';
+import { AdminPanel } from './components/AdminPanel';
 import { analyzeCompanyUrl } from './services/geminiService';
-import { AppState, AnalysisResult, Language, AutomationIdea, SavedAnalysis } from './types';
-import { AlertCircle, ExternalLink, Save, Download, Database, Trash2, Clock, Check, FileText } from 'lucide-react';
+import { AppState, AnalysisResult, Language, AutomationIdea, SavedAnalysis, AdminSettings } from './types';
+import { AlertCircle, ExternalLink, Save, FileText, Database, Trash2, Clock, Check } from 'lucide-react';
+
+const DEFAULT_SETTINGS: AdminSettings = {
+  roleDefinition: "Technical Automation Architect",
+  techFocus: `- **Prioritize n8n** as the main orchestration tool (workflow automation).
+    - **Focus on AI Agents** (LLMs acting as workers, not just chatbots).
+    - **Use APIs** directly where possible for scalability.
+    - Avoid suggesting simple "Zapier" or "Make" zaps unless it's for very basic triggers. Focus on robust, scalable architectures.
+    - Suggestions should be practical but aim for professional scalability.`,
+  customInstructions: ""
+};
 
 const App: React.FC = () => {
   // Default to Spanish ('es')
@@ -25,7 +36,11 @@ const App: React.FC = () => {
   const [analysisHistory, setAnalysisHistory] = useState<SavedAnalysis[]>([]);
   const [justSaved, setJustSaved] = useState(false);
 
-  // Load saved automations and analysis history from localStorage on mount
+  // Admin / Settings State
+  const [showAdmin, setShowAdmin] = useState(false);
+  const [adminSettings, setAdminSettings] = useState<AdminSettings>(DEFAULT_SETTINGS);
+
+  // Load saved automations, analysis history, and admin settings from localStorage on mount
   useEffect(() => {
     const savedAuto = localStorage.getItem('autoScout_saved');
     if (savedAuto) {
@@ -42,6 +57,15 @@ const App: React.FC = () => {
         setAnalysisHistory(JSON.parse(savedHistory));
       } catch (e) {
         console.error("Failed to parse analysis history", e);
+      }
+    }
+
+    const savedSettings = localStorage.getItem('autoScout_settings');
+    if (savedSettings) {
+      try {
+        setAdminSettings(JSON.parse(savedSettings));
+      } catch (e) {
+        console.error("Failed to parse settings", e);
       }
     }
   }, []);
@@ -62,6 +86,16 @@ const App: React.FC = () => {
     });
   };
 
+  const handleSaveSettings = (newSettings: AdminSettings) => {
+    setAdminSettings(newSettings);
+    localStorage.setItem('autoScout_settings', JSON.stringify(newSettings));
+  };
+
+  const handleResetSettings = () => {
+    setAdminSettings(DEFAULT_SETTINGS);
+    localStorage.setItem('autoScout_settings', JSON.stringify(DEFAULT_SETTINGS));
+  };
+
   const handleAnalyze = async (url: string) => {
     setAppState(AppState.ANALYZING);
     setCurrentUrl(url);
@@ -71,13 +105,12 @@ const App: React.FC = () => {
 
     try {
       // Prepare context from analysis history (Knowledge Base)
-      // We create a summary string of past analyses to help the AI
       const historyContext = analysisHistory.map(item => {
         return `[Company: ${item.result.profile.name} | Industry: ${item.result.profile.industry} | Automations: ${item.result.automations.map(a => a.title).join(', ')}]`;
       }).join('\n');
 
-      // Pass the current language and the history context to the service
-      const data = await analyzeCompanyUrl(url, language, historyContext);
+      // Pass language, history context AND admin settings to the service
+      const data = await analyzeCompanyUrl(url, language, historyContext, adminSettings);
       setResult(data);
       setAppState(AppState.SUCCESS);
     } catch (err: any) {
@@ -217,6 +250,15 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-slate-900 flex flex-col">
+      <AdminPanel 
+        isOpen={showAdmin} 
+        onClose={() => setShowAdmin(false)}
+        settings={adminSettings}
+        onSave={handleSaveSettings}
+        onReset={handleResetSettings}
+        language={language}
+      />
+
       <Hero 
         onAnalyze={handleAnalyze} 
         appState={appState} 
@@ -224,6 +266,7 @@ const App: React.FC = () => {
         setLanguage={setLanguage}
         url={inputUrl}
         setUrl={setInputUrl}
+        onOpenAdmin={() => setShowAdmin(true)}
       />
 
       <main className="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-8 relative z-20 w-full">
@@ -357,7 +400,7 @@ const App: React.FC = () => {
 
       </main>
 
-      <Footer language={language} />
+      <Footer language={language} onOpenAdmin={() => setShowAdmin(true)} />
     </div>
   );
 };

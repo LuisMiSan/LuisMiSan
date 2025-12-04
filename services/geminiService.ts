@@ -1,5 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
-import { AnalysisResult, Language } from "../types";
+import { AnalysisResult, Language, AdminSettings } from "../types";
 
 // Helper to clean JSON string if it's wrapped in markdown
 const cleanJsonString = (text: string): string => {
@@ -12,7 +12,12 @@ const cleanJsonString = (text: string): string => {
   return clean;
 };
 
-export const analyzeCompanyUrl = async (url: string, language: Language, pastAnalysesContext: string = ''): Promise<AnalysisResult> => {
+export const analyzeCompanyUrl = async (
+  url: string, 
+  language: Language, 
+  pastAnalysesContext: string = '',
+  settings: AdminSettings
+): Promise<AnalysisResult> => {
   if (!process.env.API_KEY) {
     throw new Error("API Key is missing. Please check your environment variables.");
   }
@@ -27,7 +32,7 @@ export const analyzeCompanyUrl = async (url: string, language: Language, pastAna
     : "CRITICAL: The Output Language MUST be ENGLISH.";
 
   const prompt = `
-    I need you to act as an expert Technical Automation Architect.
+    I need you to act as: ${settings.roleDefinition}
     
     ${langInstruction}
 
@@ -57,11 +62,10 @@ export const analyzeCompanyUrl = async (url: string, language: Language, pastAna
     Based strictly on the research above, generate 6 specific, scalable automation workflows suitable for this business.
     
     CRITICAL TECH STACK INSTRUCTIONS:
-    - **Prioritize n8n** as the main orchestration tool (workflow automation).
-    - **Focus on AI Agents** (LLMs acting as workers, not just chatbots).
-    - **Use APIs** directly where possible for scalability.
-    - Avoid suggesting simple "Zapier" or "Make" zaps unless it's for very basic triggers. Focus on robust, scalable architectures.
-    - Suggestions should be practical but aim for professional scalability.
+    ${settings.techFocus}
+
+    ADDITIONAL CUSTOM INSTRUCTIONS:
+    ${settings.customInstructions || 'None'}
 
     Make it specific to their industry (e.g., if it's a law firm, suggest an 'AI Legal Research Agent' via n8n; if e-commerce, an 'Inventory prediction API agent').
 

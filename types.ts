@@ -30,6 +30,12 @@ export interface SavedAnalysis {
   result: AnalysisResult;
 }
 
+export interface AdminSettings {
+  roleDefinition: string;
+  techFocus: string;
+  customInstructions: string;
+}
+
 export enum AppState {
   IDLE = 'IDLE',
   ANALYZING = 'ANALYZING',
