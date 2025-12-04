@@ -23,8 +23,8 @@ export const analyzeCompanyUrl = async (url: string, language: Language, pastAna
   const modelId = "gemini-2.5-flash";
 
   const langInstruction = language === 'es' 
-    ? "CRITICAL: All generated text content (summaries, titles, descriptions, steps, industry) MUST be in SPANISH." 
-    : "CRITICAL: All generated text content MUST be in ENGLISH.";
+    ? "CRITICAL: The Output Language MUST be SPANISH (Español). Even if the source website or knowledge base is in English, you MUST translate and generate the JSON response values (Summary, Industry, Challenges, Titles, Descriptions, Steps) entirely in SPANISH." 
+    : "CRITICAL: The Output Language MUST be ENGLISH.";
 
   const prompt = `
     I need you to act as an expert Technical Automation Architect.
@@ -72,20 +72,20 @@ export const analyzeCompanyUrl = async (url: string, language: Language, pastAna
     {
       "profile": {
         "name": "String",
-        "industry": "String",
-        "summary": "String",
+        "industry": "String (Translate to Spanish if language is ES)",
+        "summary": "String (Translate to Spanish if language is ES)",
         "employeeCountEstimate": "String",
         "aiMaturityLevel": "String (One of: None, Beginner, Intermediate, Advanced)",
-        "keyChallenges": ["String", "String"]
+        "keyChallenges": ["String (Translate to Spanish)", "String"]
       },
       "automations": [
         {
-          "title": "String",
-          "description": "String (Explain the workflow logic and why it scales)",
+          "title": "String (Translate to Spanish if language is ES)",
+          "description": "String (Explain the workflow logic and why it scales. Translate to Spanish if language is ES)",
           "impact": "High" | "Medium" | "Low",
           "difficulty": "Easy" | "Moderate" | "Advanced",
           "tools": ["n8n", "OpenAI API", "Anthropic API", "Vector DB", "Specific API"],
-          "implementationSteps": ["Step 1", "Step 2"]
+          "implementationSteps": ["Step 1 (In Spanish)", "Step 2 (In Spanish)"]
         }
       ]
     }
