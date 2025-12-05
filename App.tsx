@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Hero } from './components/Hero';
 import { CompanyCard } from './components/CompanyCard';
 import { AutomationCard } from './components/AutomationCard';
@@ -6,7 +6,7 @@ import { Footer } from './components/Footer';
 import { AdminPanel } from './components/AdminPanel';
 import { analyzeCompanyUrl } from './services/geminiService';
 import { AppState, AnalysisResult, Language, AutomationIdea, SavedAnalysis, AdminSettings } from './types';
-import { AlertCircle, ExternalLink, Save, FileText, Database, Trash2, Clock, Check } from 'lucide-react';
+import { AlertCircle, ExternalLink, Save, FileText, Database, Trash2, Clock, Check, Filter } from 'lucide-react';
 
 const DEFAULT_SETTINGS: AdminSettings = {
   roleDefinition: "Technical Automation Architect",
@@ -35,6 +35,7 @@ const App: React.FC = () => {
   // Database State
   const [analysisHistory, setAnalysisHistory] = useState<SavedAnalysis[]>([]);
   const [justSaved, setJustSaved] = useState(false);
+  const [selectedIndustry, setSelectedIndustry] = useState<string>('ALL');
 
   // Admin / Settings State
   const [showAdmin, setShowAdmin] = useState(false);
@@ -69,6 +70,18 @@ const App: React.FC = () => {
       }
     }
   }, []);
+
+  // Compute unique industries for the filter
+  const uniqueIndustries = useMemo(() => {
+    const industries = analysisHistory.map(item => item.result.profile.industry);
+    return Array.from(new Set(industries)).sort();
+  }, [analysisHistory]);
+
+  // Compute filtered history
+  const filteredHistory = useMemo(() => {
+    if (selectedIndustry === 'ALL') return analysisHistory;
+    return analysisHistory.filter(item => item.result.profile.industry === selectedIndustry);
+  }, [analysisHistory, selectedIndustry]);
 
   const handleToggleSaveAutomation = (idea: AutomationIdea) => {
     setSavedAutomations(prev => {
@@ -240,6 +253,8 @@ const App: React.FC = () => {
     dbTitle: language === 'es' ? 'Historial de Análisis (Base de Conocimiento)' : 'Analysis History (Knowledge Base)',
     dbEmpty: language === 'es' ? 'No hay análisis guardados en la base de datos.' : 'No analyses saved in the database.',
     load: language === 'es' ? 'Cargar' : 'Load',
+    filterAll: language === 'es' ? 'Todas las Industrias' : 'All Industries',
+    noResults: language === 'es' ? 'No hay resultados para este filtro.' : 'No results for this filter.',
   };
 
   const formatDate = (ts: number) => {
@@ -359,10 +374,31 @@ const App: React.FC = () => {
         )}
 
         {/* Database / History Section */}
-        <div className="mt-16 border-t border-slate-800 pt-10">
-          <div className="flex items-center gap-3 mb-6">
-            <Database className="w-5 h-5 text-blue-500" />
-            <h2 className="text-xl font-bold text-white">{t.dbTitle}</h2>
+        <div className="mt-16 border-t border-slate-800 pt-10 pb-20">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+            <div className="flex items-center gap-3">
+              <Database className="w-5 h-5 text-blue-500" />
+              <h2 className="text-xl font-bold text-white">{t.dbTitle}</h2>
+            </div>
+
+            {/* Industry Filter Dropdown */}
+            {analysisHistory.length > 0 && (
+              <div className="flex items-center gap-2 bg-slate-800/50 rounded-lg px-3 py-1.5 border border-slate-700">
+                <Filter className="w-4 h-4 text-slate-400" />
+                <select
+                  value={selectedIndustry}
+                  onChange={(e) => setSelectedIndustry(e.target.value)}
+                  className="bg-transparent text-slate-300 text-sm outline-none border-none cursor-pointer hover:text-white"
+                >
+                  <option value="ALL" className="bg-slate-800 text-slate-300">{t.filterAll}</option>
+                  {uniqueIndustries.map((ind) => (
+                    <option key={ind} value={ind} className="bg-slate-800 text-slate-300">
+                      {ind}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
           {analysisHistory.length === 0 ? (
@@ -370,31 +406,43 @@ const App: React.FC = () => {
               {t.dbEmpty}
             </div>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              {analysisHistory.map((item) => (
-                <div key={item.id} className="bg-slate-800/50 border border-slate-700 rounded-lg p-4 hover:border-blue-500/30 transition-all group">
-                  <div className="flex justify-between items-start mb-2">
-                    <h4 className="font-semibold text-white truncate pr-2">{item.result.profile.name}</h4>
-                    <button 
-                      onClick={() => handleDeleteHistoryItem(item.id)}
-                      className="text-slate-500 hover:text-red-400 transition-colors p-1"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-4">
-                    <Clock className="w-3 h-3" />
-                    {formatDate(item.timestamp)}
-                  </div>
-                  <button 
-                    onClick={() => handleLoadHistoryItem(item)}
-                    className="w-full py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm font-medium rounded transition-colors"
-                  >
-                    {t.load}
-                  </button>
+            <>
+              {filteredHistory.length === 0 ? (
+                <div className="text-slate-500 italic text-sm text-center py-8">
+                  {t.noResults}
                 </div>
-              ))}
-            </div>
+              ) : (
+                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                  {filteredHistory.map((item) => (
+                    <div key={item.id} className="bg-slate-800/50 border border-slate-700 rounded-lg p-4 hover:border-blue-500/30 transition-all group relative">
+                      <div className="flex justify-between items-start mb-2">
+                        <div className="pr-6">
+                           <h4 className="font-semibold text-white truncate">{item.result.profile.name}</h4>
+                           <span className="text-xs text-blue-400 block truncate">{item.result.profile.industry}</span>
+                        </div>
+                        <button 
+                          onClick={() => handleDeleteHistoryItem(item.id)}
+                          className="text-slate-600 hover:text-red-400 transition-colors p-1 absolute top-3 right-3"
+                          title="Eliminar"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-4 mt-2">
+                        <Clock className="w-3 h-3" />
+                        {formatDate(item.timestamp)}
+                      </div>
+                      <button 
+                        onClick={() => handleLoadHistoryItem(item)}
+                        className="w-full py-2 bg-slate-700 hover:bg-slate-600 text-slate-200 text-sm font-medium rounded transition-colors"
+                      >
+                        {t.load}
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
           )}
         </div>
 
