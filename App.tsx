@@ -10,13 +10,12 @@ import { AlertCircle, ExternalLink, Save, FileText, Database, Trash2, Clock, Che
 import { jsPDF } from "jspdf";
 
 const DEFAULT_SETTINGS: AdminSettings = {
-  roleDefinition: "Technical Automation Architect",
-  techFocus: `- **Prioritize n8n** as the main orchestration tool (workflow automation).
-    - **Focus on AI Agents** (LLMs acting as workers, not just chatbots).
-    - **Use APIs** directly where possible for scalability.
-    - Avoid suggesting simple "Zapier" or "Make" zaps unless it's for very basic triggers. Focus on robust, scalable architectures.
-    - Suggestions should be practical but aim for professional scalability.`,
-  customInstructions: ""
+  roleDefinition: "Technical Automation Architect & ROI Strategist",
+  techFocus: `- **Efficiency First:** Prioritize "Standard Automation" (n8n, Webhooks, API) for deterministic tasks (data moving, syncing) as they are free/cheaper.
+    - **AI Agents Usage:** ONLY suggest "Generative AI Agents" if the task requires reasoning, creativity, or complex parsing that regex/APIs cannot handle.
+    - **Scalability:** Focus on solutions that scale without linear cost increases.
+    - **Tooling:** n8n (self-hostable/scalable), Direct APIs, and lightweight Scripts. Avoid expensive per-task tools if a cheaper alternative exists.`,
+  customInstructions: "Analyze the 'Cost vs. Utility'. If a simple script does the job, suggest that instead of an expensive AI Agent."
 };
 
 const App: React.FC = () => {

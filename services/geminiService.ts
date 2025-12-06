@@ -67,6 +67,12 @@ export const analyzeCompanyUrl = async (
     ADDITIONAL CUSTOM INSTRUCTIONS:
     ${settings.customInstructions || 'None'}
 
+    COST-BENEFIT LOGIC (VERY IMPORTANT):
+    - Evaluate: "Can this be done with a simple automation?" (e.g., n8n webhook, cron job, regex, simple API integration).
+    - If YES: Suggest the "Standard Automation". It is cheaper, more reliable, and has 0 token cost.
+    - If NO (it requires reasoning, creativity, parsing unstructured text): Suggest an "AI Agent".
+    - Your goal is PROFITABILITY and SCALABILITY. Do not suggest complex AI agents for simple data moving tasks.
+
     Make it specific to their industry (e.g., if it's a law firm, suggest an 'AI Legal Research Agent' via n8n; if e-commerce, an 'Inventory prediction API agent').
 
     STEP 3: OUTPUT
@@ -85,10 +91,10 @@ export const analyzeCompanyUrl = async (
       "automations": [
         {
           "title": "String (Translate to Spanish if language is ES)",
-          "description": "String (Explain the workflow logic and why it scales. Translate to Spanish if language is ES)",
+          "description": "String (Explain the workflow logic and why it scales. Mention if it is an Agent or standard automation. Translate to Spanish if language is ES)",
           "impact": "High" | "Medium" | "Low",
           "difficulty": "Easy" | "Moderate" | "Advanced",
-          "tools": ["n8n", "OpenAI API", "Anthropic API", "Vector DB", "Specific API"],
+          "tools": ["n8n", "OpenAI API", "Anthropic API", "Vector DB", "Specific API", "Webhooks"],
           "implementationSteps": ["Step 1 (In Spanish)", "Step 2 (In Spanish)"]
         }
       ]
