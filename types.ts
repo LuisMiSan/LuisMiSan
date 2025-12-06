@@ -1,49 +1,48 @@
-export type BusinessArea = 'marketing' | 'sales' | 'logistics' | 'hr' | 'finance' | 'it' | 'general' | 'ecommerce' | 'social_media' | 'content' | 'ux_ui' | 'data_analytics';
 
-export interface SolutionStep {
-    step: number;
-    title: string;
-    description: string;
+export interface AutomationIdea {
+  title: string;
+  description: string;
+  impact: 'High' | 'Medium' | 'Low';
+  difficulty: 'Easy' | 'Moderate' | 'Advanced';
+  tools: string[];
+  implementationSteps: string[];
 }
 
-export interface Solution {
-    title: string;
-    summary: string;
-    steps: SolutionStep[];
-    isPremium?: boolean;
+export interface CompanyProfile {
+  name: string;
+  industry: string;
+  summary: string;
+  employeeCountEstimate: string;
+  aiMaturityLevel: 'None' | 'Beginner' | 'Intermediate' | 'Advanced';
+  keyChallenges: string[];
 }
 
 export interface AnalysisResult {
-    problemAnalysis: {
-        identifiedProblem: string;
-        impact: string;
-    };
-    shortTermSolution: Solution;
-    longTermSolution: Solution;
+  profile: CompanyProfile;
+  automations: AutomationIdea[];
+  sources: { uri: string; title: string }[];
 }
 
-export interface GroundedAnswer {
-    answer: string;
-    sources: { uri: string; title: string; }[];
-}
-
-export interface ChatMessage {
-    role: 'user' | 'model';
-    content: string;
-}
-
-export interface Example {
-    title: string;
-    description: string;
-    area: BusinessArea;
-}
-
-export interface SolutionRecord {
+export interface SavedAnalysis {
   id: string;
-  companyType: string;
-  niche: string;
-  problemDescription: string;
-  businessArea: BusinessArea;
-  result: AnalysisResult | GroundedAnswer;
-  timestamp: string;
+  timestamp: number;
+  url: string;
+  result: AnalysisResult;
 }
+
+export interface AdminSettings {
+  roleDefinition: string;
+  techFocus: string;
+  customInstructions: string;
+}
+
+export enum AppState {
+  IDLE = 'IDLE',
+  ANALYZING = 'ANALYZING',
+  SUCCESS = 'SUCCESS',
+  ERROR = 'ERROR'
+}
+
+export type Language = 'es' | 'en';
+
+export type DownloadFormat = 'pdf' | 'word' | 'markdown' | 'txt' | 'html' | 'json';
