@@ -1,144 +1,185 @@
-import { GoogleGenAI } from "@google/genai";
-import { AnalysisResult, Language, AdminSettings } from "../types";
 
-// Helper to clean JSON string if it's wrapped in markdown
-const cleanJsonString = (text: string): string => {
-  let clean = text.trim();
-  if (clean.startsWith('```json')) {
-    clean = clean.replace(/^```json/, '').replace(/```$/, '');
-  } else if (clean.startsWith('```')) {
-    clean = clean.replace(/^```/, '').replace(/```$/, '');
-  }
-  return clean;
+import { GoogleGenAI, Type, Modality, Chat, GenerateContentResponse, Content, LiveSession, LiveServerMessage } from "@google/genai";
+import type { AnalysisResult, GroundedAnswer } from '../types';
+
+// Use a safe check for process.env to prevent ReferenceError in browsers
+const apiKey = (typeof process !== 'undefined' && process.env) ? process.env.API_KEY : undefined;
+
+if (!apiKey) {
+    // We throw here if the key is truly missing to alert the developer, 
+    // but the typeof check above prevents a crash if 'process' itself is undefined.
+    throw new Error("API_KEY environment variable not set");
+}
+
+const ai = new GoogleGenAI({ apiKey });
+
+const analysisSchema = {
+    type: Type.OBJECT,
+    properties: {
+        problemAnalysis: {
+            type: Type.OBJECT,
+            properties: {
+                identifiedProblem: { type: Type.STRING, description: "El problema principal detectado en la descripción del usuario." },
+                impact: { type: Type.STRING, description: "Cómo este problema impacta al negocio." },
+            },
+            required: ['identifiedProblem', 'impact'],
+        },
+        shortTermSolution: {
+            type: Type.OBJECT,
+            properties: {
+                title: { type: Type.STRING, description: "Título para la solución a corto plazo." },
+                summary: { type: Type.STRING, description: "Resumen de la estrategia a corto plazo." },
+                steps: {
+                    type: Type.ARRAY,
+                    items: {
+                        type: Type.OBJECT,
+                        properties: {
+                            step: { type: Type.INTEGER },
+                            title: { type: Type.STRING },
+                            description: { type: Type.STRING },
+                        },
+                        required: ['step', 'title', 'description']
+                    }
+                },
+                isPremium: { type: Type.BOOLEAN, description: "Marcar como true si esta es una solución avanzada." }
+            },
+            required: ['title', 'summary', 'steps']
+        },
+        longTermSolution: {
+            type: Type.OBJECT,
+            properties: {
+                title: { type: Type.STRING, description: "Título para la solución a largo plazo." },
+                summary: { type: Type.STRING, description: "Resumen de la estrategia a largo plazo." },
+                steps: {
+                    type: Type.ARRAY,
+                    items: {
+                        type: Type.OBJECT,
+                        properties: {
+                            step: { type: Type.INTEGER },
+                            title: { type: Type.STRING },
+                            description: { type: Type.STRING },
+                        },
+                        required: ['step', 'title', 'description']
+                    }
+                },
+                isPremium: { type: Type.BOOLEAN, description: "Marcar como true si esta es una solución avanzada." }
+            },
+            required: ['title', 'summary', 'steps']
+        }
+    },
+    required: ['problemAnalysis', 'shortTermSolution', 'longTermSolution']
 };
 
-export const analyzeCompanyUrl = async (
-  url: string, 
-  language: Language, 
-  pastAnalysesContext: string = '',
-  settings: AdminSettings
-): Promise<AnalysisResult> => {
-  if (!process.env.API_KEY) {
-    throw new Error("API Key is missing. Please check your environment variables.");
-  }
 
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+const generatePrompt = (description: string, area: string): string => {
+    return `
+      Analiza el siguiente problema empresarial en el área de ${area}.
+      Descripción del problema: "${description}"
 
-  // We use gemini-2.5-flash for speed and reasoning capabilities.
-  const modelId = "gemini-2.5-flash";
+      Proporciona un análisis detallado que incluya:
+      1.  Un diagnóstico claro del problema raíz.
+      2.  El impacto potencial en el negocio.
+      3.  Una solución a corto plazo con pasos accionables.
+      4.  Una solución estratégica a largo plazo con pasos detallados.
+      
+      Sé claro, conciso y práctico en tus recomendaciones. Una de las soluciones (corto o largo plazo) debe ser marcada como premium aleatoriamente.
+    `;
+};
 
-  const langInstruction = language === 'es' 
-    ? "CRITICAL: The Output Language MUST be SPANISH (Español). Even if the source website or knowledge base is in English, you MUST translate and generate the JSON response values (Summary, Industry, Challenges, Titles, Descriptions, Steps) entirely in SPANISH." 
-    : "CRITICAL: The Output Language MUST be ENGLISH.";
 
-  const prompt = `
-    I need you to act as: ${settings.roleDefinition}
-    
-    ${langInstruction}
-
-    INPUT CONTEXT:
-    1. TARGET URL: "${url}"
-    
-    2. INTERNAL KNOWLEDGE BASE (PREVIOUS ANALYSES):
-    "${pastAnalysesContext}"
-    
-    INSTRUCTION FOR KNOWLEDGE BASE:
-    - Review the "INTERNAL KNOWLEDGE BASE" above. 
-    - If there are companies in the same or similar industry, use their successful automation ideas as inspiration, but refine them to be specific to the current target.
-    - If the industry is different, ensure the new suggestions are as high-quality and specific as the previous ones.
-    - Use this data to ensure consistency and learn from previous workflows.
-
-    STEP 1: RESEARCH
-    Use Google Search to analyze the target company URL.
-    Find out:
-    - What is the company name?
-    - What industry/sector are they in?
-    - A brief summary of what they do.
-    - An estimate of their employee count.
-    - Infer their "AI Maturity" (None, Beginner, Intermediate, Advanced) based on their tech stack, job postings, or modernity of their site.
-    - Identify 2-3 potential operational bottlenecks or challenges common in this specific industry.
-
-    STEP 2: IDEATION
-    Based strictly on the research above, generate 6 specific, scalable automation workflows suitable for this business.
-    
-    CRITICAL TECH STACK INSTRUCTIONS:
-    ${settings.techFocus}
-
-    ADDITIONAL CUSTOM INSTRUCTIONS:
-    ${settings.customInstructions || 'None'}
-
-    COST-BENEFIT LOGIC (VERY IMPORTANT):
-    - Evaluate: "Can this be done with a simple automation?" (e.g., n8n webhook, cron job, regex, simple API integration).
-    - If YES: Suggest the "Standard Automation". It is cheaper, more reliable, and has 0 token cost.
-    - If NO (it requires reasoning, creativity, parsing unstructured text): Suggest an "AI Agent".
-    - Your goal is PROFITABILITY and SCALABILITY. Do not suggest complex AI agents for simple data moving tasks.
-
-    Make it specific to their industry (e.g., if it's a law firm, suggest an 'AI Legal Research Agent' via n8n; if e-commerce, an 'Inventory prediction API agent').
-
-    STEP 3: OUTPUT
-    Return the result as a strictly valid JSON object. Do not add conversational text outside the JSON.
-    
-    The JSON structure must be:
-    {
-      "profile": {
-        "name": "String",
-        "industry": "String (Translate to Spanish if language is ES)",
-        "summary": "String (Translate to Spanish if language is ES)",
-        "employeeCountEstimate": "String",
-        "aiMaturityLevel": "String (One of: None, Beginner, Intermediate, Advanced)",
-        "keyChallenges": ["String (Translate to Spanish)", "String"]
-      },
-      "automations": [
-        {
-          "title": "String (Translate to Spanish if language is ES)",
-          "description": "String (Explain the workflow logic and why it scales. Mention if it is an Agent or standard automation. Translate to Spanish if language is ES)",
-          "impact": "High" | "Medium" | "Low",
-          "difficulty": "Easy" | "Moderate" | "Advanced",
-          "tools": ["n8n", "OpenAI API", "Anthropic API", "Vector DB", "Specific API", "Webhooks"],
-          "implementationSteps": ["Step 1 (In Spanish)", "Step 2 (In Spanish)"]
-        }
-      ]
-    }
-  `;
-
-  try {
+export const analyzeProblemWithThinking = async (description: string, area: string): Promise<AnalysisResult> => {
+    const prompt = generatePrompt(description, area);
     const response = await ai.models.generateContent({
-      model: modelId,
-      contents: prompt,
-      config: {
-        tools: [{ googleSearch: {} }],
-      },
+        model: "gemini-2.5-pro",
+        contents: prompt,
+        config: {
+            thinkingConfig: { thinkingBudget: 32768 },
+            responseMimeType: "application/json",
+            responseSchema: analysisSchema,
+        },
     });
 
-    const text = response.text;
-    
-    if (!text) {
-      throw new Error("No response received from Gemini.");
-    }
-
-    let parsedData;
+    const jsonText = response.text.trim();
     try {
-      parsedData = JSON.parse(cleanJsonString(text));
+        return JSON.parse(jsonText) as AnalysisResult;
     } catch (e) {
-      console.error("JSON Parse Error:", e);
-      console.log("Raw Text:", text);
-      throw new Error("Failed to parse the analysis. The AI response was not valid JSON.");
+        console.error("Failed to parse complex analysis JSON:", e);
+        throw new Error("La respuesta de la IA no tuvo un formato válido.");
     }
+};
 
-    // Extract grounding metadata (sources)
+export const analyzeProblemWithSearch = async (description: string, area: string): Promise<GroundedAnswer> => {
+    const prompt = `
+      Basado en información web actualizada, analiza el siguiente problema empresarial en el área de ${area} y proporciona una solución.
+      Descripción: "${description}"
+      Proporciona una respuesta clara y lista las fuentes que utilizaste.
+    `;
+    const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: prompt,
+        config: {
+            tools: [{ googleSearch: {} }],
+        },
+    });
+
     const sources = response.candidates?.[0]?.groundingMetadata?.groundingChunks
-      ?.map((chunk) => chunk.web)
-      .filter((web) => web !== undefined && web !== null)
-      .map((web) => ({ uri: web.uri || '', title: web.title || 'Source' })) || [];
+        ?.map(chunk => chunk.web)
+        .filter(web => web?.uri && web?.title) as { uri: string, title: string }[] || [];
 
     return {
-      profile: parsedData.profile,
-      automations: parsedData.automations,
-      sources: sources
+        answer: response.text,
+        sources: sources,
     };
+};
 
-  } catch (error) {
-    console.error("Gemini API Error:", error);
-    throw error;
-  }
+export const getTtsAudio = async (text: string): Promise<string> => {
+    const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash-preview-tts",
+        contents: [{ parts: [{ text: `Lee el siguiente texto de forma clara y profesional: ${text}` }] }],
+        config: {
+            responseModalities: [Modality.AUDIO],
+            speechConfig: {
+                voiceConfig: {
+                    prebuiltVoiceConfig: { voiceName: 'Kore' },
+                },
+            },
+        },
+    });
+
+    const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+    if (!base64Audio) {
+        throw new Error("No se pudo generar el audio.");
+    }
+    return base64Audio;
+};
+
+export const startChat = (history: Content[]): Chat => {
+    return ai.chats.create({
+        model: 'gemini-2.5-flash',
+        history,
+        config: {
+            systemInstruction: 'Eres un asistente de negocios amigable y servicial. Responde preguntas de forma concisa.',
+        },
+    });
+};
+
+export const connectToLiveSession = (callbacks: {
+    onopen: () => void;
+    onmessage: (message: LiveServerMessage) => void;
+    onerror: (e: ErrorEvent) => void;
+    onclose: (e: CloseEvent) => void;
+}): Promise<LiveSession> => {
+    return ai.live.connect({
+        model: 'gemini-2.5-flash-native-audio-preview-09-2025',
+        callbacks,
+        config: {
+            responseModalities: [Modality.AUDIO],
+            speechConfig: {
+                voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Zephyr' } },
+            },
+            systemInstruction: 'Eres un asistente de negocios amigable y servicial. Responde preguntas de forma concisa. Mantén tus respuestas breves.',
+            inputAudioTranscription: {},
+            outputAudioTranscription: {},
+        },
+    });
 };
