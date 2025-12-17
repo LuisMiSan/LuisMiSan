@@ -1,4 +1,5 @@
-export type BusinessArea = 'marketing' | 'sales' | 'logistics' | 'hr' | 'finance' | 'it' | 'general' | 'ecommerce' | 'social_media' | 'content' | 'ux_ui' | 'data_analytics';
+
+export type BusinessArea = string;
 
 export interface SolutionStep {
     step: number;
@@ -33,6 +34,7 @@ export interface ChatMessage {
 }
 
 export interface Example {
+    id: string;
     title: string;
     description: string;
     area: BusinessArea;
@@ -46,4 +48,20 @@ export interface SolutionRecord {
   businessArea: BusinessArea;
   result: AnalysisResult | GroundedAnswer;
   timestamp: string;
+}
+
+export interface BusinessAreaConfig {
+    id: string;
+    label: string;
+    group: 'Digital' | 'Tradicional';
+}
+
+export interface AppConfig {
+    appName: string;
+    appDescription: string;
+    footerText: string;
+    aiSystemInstruction: string;
+    chatSystemInstruction: string;
+    examples: Example[];
+    businessAreas: BusinessAreaConfig[];
 }
