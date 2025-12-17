@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { BrainCircuitIcon } from './icons/BrainCircuitIcon';
 
@@ -6,7 +7,7 @@ interface PasswordProtectionProps {
 }
 
 // Contraseña simple para la beta. En una app real, esto sería mucho más seguro.
-const CORRECT_PASSWORD = 'GrowthMindBeta2024';
+const CORRECT_PASSWORD = 'iadivision2024';
 
 export const PasswordProtection: React.FC<PasswordProtectionProps> = ({ onAuthSuccess }) => {
     const [password, setPassword] = useState('');
