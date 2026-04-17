@@ -1,0 +1,8 @@
+{
+  "name": "SnapCal AI",
+  "description": "Analiza las calorías de tu comida al instante con Gemini.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": []
+}
